@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>TODO list</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+
+    <!--  Скрипт показывает только не выполненные задания в таблице при запуске. -->
+    <script>
+        $(document).ready(function(){
+            showFiltered();
+        });
+    </script>
+
+    <!--  Скрипт отслеживает изменения чек-боксов. При изменении статуса выполнения
+     заданий отправляется запрос на редактирование элемента в базе данных.-->
+    <script>
+        $(document).on('change', ':checkbox', function () {
+            var id = $(this).attr('id');
+            if (id !== 'showAll') {
+                var desc = $(this).attr('desc');
+                var done = $(this).prop('checked');
+                var task = {
+                    id : id,
+                    desc : desc,
+                    done : done
+                };
+                $.ajax({
+                    type: 'POST',
+                    url:'./todo',
+                    data: JSON.stringify(task),
+                    datatype: 'json',
+                    success: function (data, status, settings) {
+                        console.log('success update');
+                    }
+                })
+            }
+        })
+    </script>
+
+    <!--  Скрипт отправляет ajax запрос. On success: обновляет таблицу (показывает все задания)-->
+    <script>
+        function showAll() {
+            var filter = {
+                showAll : true
+            };
+            $.ajax({
+                type: 'POST',
+                url: './show',
+                data: JSON.stringify(filter),
+                dataType: 'json',
+                success: function(data, status, settings){
+                    console.log(data);
+                    addTask(data)
+                }
+            });
+        }
+    </script>
+
+    <!--  Скрипт отправляет ajax запрос. On success: обновляет таблицу (показывает невыполненные задания)-->
+    <script>
+        function showFiltered() {
+            var filter = {
+                showAll : false
+            };
+            $.ajax({
+                type: 'POST',
+                url: './show',
+                data: JSON.stringify(filter),
+                dataType: 'json',
+                success: function(data, status, settings){
+                    console.log(data);
+                    addTask(data)
+                }
+            });
+        }
+    </script>
+
+    <!--  Скрипт обновляет содержимое таблицы.-->
+    <script>
+        function deleteRows() {
+            var parent = document.getElementById('rows');
+            var nodes = parent.childNodes;
+            for (var i = 0; i < nodes.length; i++) {
+                var elem = nodes[i];
+                parent.removeChild(elem);
+                i--;
+            }
+        }
+
+        function addTask (data) {
+            deleteRows();
+            var arr = data['items'];
+            if (arr !== null) {
+                for (i = 0; i < arr.length; i++) {
+                    var id = arr[i]['id'];
+                    var desc = arr[i]['desc'];
+                    var created = new Date(arr[i]['created']).toLocaleString();
+                    var done = arr[i]['done'];
+
+                    var row = document.createElement('tr');
+                    var data_id = document.createElement('td');
+                    data_id.innerHTML = id;
+                    var data_desc = document.createElement('td');
+                    data_desc.innerHTML = desc;
+                    var data_created = document.createElement('td');
+                    data_created.innerHTML = created;
+                    var data_done = document.createElement('td');
+
+                    document.getElementById('rows').appendChild(row);
+                    row.appendChild(data_id);
+                    row.appendChild(data_desc);
+                    row.appendChild(data_created);
+                    row.appendChild(data_done);
+
+                    if (done === true) {
+                        $("#rows td:last")
+                            .html('<input type="checkbox" class="form-check-input" checked/>');
+                    } else {
+                        $("#rows td:last")
+                            .html('<input type="checkbox" class="form-check-input" />');
+                    }
+
+                    $("#rows input:last").attr('id', id);
+                    $("#rows input:last").attr('desc', desc);
+                }
+            }
+        }
+    </script>
+
+    <!--  Скрипт создает новое задание, оно добавляется в БД с помощью запроса.-->
+    <script>
+        function createTask() {
+            var desc = $('#desc').val();
+            var task = {
+                desc: desc
+            };
+
+            $.ajax({
+                type: 'POST',
+                url:'./todo',
+                data: JSON.stringify(task),
+                datatype: 'json',
+                beforeSend: function (xhr, settings) {
+                    var result = validate();
+                    if (result === false) {
+                        xhr.abort();
+                    }
+                },
+                success: function (data, status, settings) {
+                    filter();
+                }
+            })
+        }
+    </script>
+
+    <!--  Скрипт проверяет правильность внесенной информации в форму. -->
+    <script>
+        function validate() {
+            var result = true;
+            if ($('#desc').val() === '') {
+                alert($('#desc').attr('placeholder'));
+                result = false;
+            }
+            if ($('#desc').val().toString().length > 250) {
+                alert ('Текст не может быть длинее 250 символов');
+                result = false;
+            }
+            return result;
+        }
+    </script>
+
+    <!--  Скрипт запускается при изменении фильтра на странице, запускается соответствующий запрос.-->
+    <script>
+        function filter() {
+            var check = $('#showAll').prop('checked');
+            if (check) {
+                showAll();
+            } else {
+                showFiltered();
+            }
+        }
+    </script>
+
+    <!-- Скрипт удаляет выполненные задания -->
+    <script>
+        function removeDone() {
+            $.ajax({
+                type: 'POST',
+                url:'./removedone',
+                success: function(){
+                    showAll();
+                }
+            })
+        }
+    </script>
+
+    <!-- Скрипт очищает список заданий -->
+    <script>
+        function removeAll() {
+            $.ajax({
+                type: 'POST',
+                url:'./removeall',
+                success: function(){
+                    showAll();
+                }
+            })
+        }
+    </script>
+</head>
+
+
+<body>
+<div class="container-fluid">
+    <form class="form-horizontal col-sm-offset-2">
+        <h2 class="form-horizontal col-sm-offset-4">TODO list</h2>
+        <div class="col-sm-7">
+            <textarea class="form-control" id="desc" rows="4" placeholder="Что вы хотите запланировать?"></textarea> <br />
+            <button type="button" class="btn btn-success" onclick="createTask()">Добавить задание</button>
+            <button type="reset" class="btn btn-default">Очистить форму</button>
+            <button type="button" class="btn btn-default" onclick="removeDone()">Удалить выполненные</button>
+            <button type="button" class="btn btn-default" onclick="removeAll()">Очистить список заданий</button>
+        </div>
+    </form>
+    <br/>
+    <div class="col-sm-7 col-sm-offset-2">
+        <br />
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" id="showAll" check onchange="filter()"/>
+            <label class="form-check-label" for="showAll">Показать все задания</label>
+        </div>
+        <table class="table table-striped" id="table">
+            <thead>
+            <tr>
+                <th width="5%">№</th>
+                <th width="75%">Описание задания</th>
+                <th width="15%">Дата создания</th>
+                <th width="5%">Статус</th>
+            </tr>
+            </thead>
+            <tbody id="rows">
+            </tbody>
+        </table>
+    </div>
+</div>
+</body>
+</html>

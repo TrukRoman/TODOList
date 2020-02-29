@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="ISO-8859-1" ?>
+<web-app xmlns="http://java.sun.com/xml/ns/j2ee"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://java.sun.com/xml/ns/j2ee
+         http://java.sun.com/xml/ns/j2ee/web-app_2_4.xsd"
+         version="2.4">
+
+    <servlet>
+        <servlet-name>TodoServlet</servlet-name>
+        <servlet-class>todolist.servlets.TodoServlet</servlet-class>
+        <load-on-startup>0</load-on-startup>
+    </servlet>
+
+    <servlet-mapping>
+        <servlet-name>TodoServlet</servlet-name>
+        <url-pattern>/todo</url-pattern>
+    </servlet-mapping>
+
+    <servlet>
+        <servlet-name>ShowServlet</servlet-name>
+        <servlet-class>todolist.servlets.ShowServlet</servlet-class>
+        <load-on-startup>0</load-on-startup>
+    </servlet>
+
+    <servlet-mapping>
+        <servlet-name>ShowServlet</servlet-name>
+        <url-pattern>/show</url-pattern>
+    </servlet-mapping>
+
+    <servlet>
+        <servlet-name>RemoveDoneServlet</servlet-name>
+        <servlet-class>todolist.servlets.RemoveDoneServlet</servlet-class>
+        <load-on-startup>0</load-on-startup>
+    </servlet>
+
+    <servlet-mapping>
+        <servlet-name>RemoveDoneServlet</servlet-name>
+        <url-pattern>/removedone</url-pattern>
+    </servlet-mapping>
+
+    <servlet>
+        <servlet-name>RemoveAllServlet</servlet-name>
+        <servlet-class>todolist.servlets.RemoveServlet</servlet-class>
+        <load-on-startup>0</load-on-startup>
+    </servlet>
+
+    <servlet-mapping>
+        <servlet-name>RemoveAllServlet</servlet-name>
+        <url-pattern>/removeall</url-pattern>
+    </servlet-mapping>
+
+</web-app>
