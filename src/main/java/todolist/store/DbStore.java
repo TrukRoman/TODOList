@@ -4,10 +4,11 @@ import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.Transaction;
 import org.hibernate.cfg.Configuration;
-import org.hibernate.query.Query;
 import todolist.models.Item;
 
 import java.util.List;
+import java.util.function.Consumer;
+import java.util.function.Function;
 
 /**
  * Класс для работы с базой данных.
@@ -23,101 +24,65 @@ public class DbStore {
         return INSTANCE;
     }
 
-    /**
-     * Метод для добавления / редактирования задания.
-     */
-    public void addOrUpdateItem(Item item) {
-        Session session = factory.openSession();
-        Transaction tr = null;
+    private <T> T tx(final Function<Session, T> command) {
+        final Session session = factory.openSession();
+        final Transaction tx = session.beginTransaction();
         try {
-            tr = session.beginTransaction();
-            session.saveOrUpdate(item);
-            tr.commit();
-        } catch (Exception e) {
-            if (tr != null) {
-                tr.rollback();
-                e.printStackTrace();
-            }
+            T rsl = command.apply(session);
+            tx.commit();
+            return rsl;
+        } catch (final Exception e) {
+            session.getTransaction().rollback();
+            throw e;
         } finally {
             session.close();
         }
+    }
+
+    /**
+     * Метод для добавления / редактирования задания.
+     */
+    public Item addOrUpdateItem(Item item) {
+        return tx(
+                session -> {
+                    session.saveOrUpdate(item);
+                    return item;
+                }
+        );
     }
 
     /**
      * Метод возвращает список всех заданий в БД.
      */
     public List findAll() {
-        Session session = factory.openSession();
-        List items = null;
-        Transaction tr = null;
-        try {
-            tr = session.beginTransaction();
-            items = session.createQuery("from Item").list();
-            tr.commit();
-        } catch (Exception e) {
-            if (tr != null) {
-                tr.rollback();
-                e.printStackTrace();
-            }
-        } finally {
-            session.close();
-        }
-        return items;
+        return this.tx(
+                session -> session.createQuery("from Item").list()
+        );
     }
 
     /**
      * Метод возвращает список невыполненных заданий из БД.
      */
     public List findFiltered() {
-        Session session = factory.openSession();
-        List items = null;
-        Transaction tr = null;
-        try {
-            tr = session.beginTransaction();
-            items = session.createQuery("from Item where done = false").list();
-            tr.commit();
-        } catch (Exception e) {
-            if (tr != null) {
-                tr.rollback();
-                e.printStackTrace();
-            }
-        } finally {
-            session.close();
-        }
-        return items;
+        return this.tx(
+                session -> session.createQuery("from Item where done = false").list()
+        );
     }
-
+    /**
+     * Метод удаляет выполненые задания из БД.
+     */
     public void removeDone() {
-        Session session = factory.openSession();
-        Transaction tr = null;
-        try {
-            tr = session.beginTransaction();
-            Query q = session.createQuery("delete Item where done = true");
-            q.executeUpdate();
-        } catch (Exception e) {
-            if (tr != null) {
-                tr.rollback();
-                e.printStackTrace();
-            }
-        } finally {
-            session.close();
-        }
+        this.tx(
+                session -> session.createQuery("delete Item where done = true").executeUpdate()
+        );
     }
 
+    /**
+     * Метод удаляет все задания из БД
+     */
     public void removeAll() {
-        Session session = factory.openSession();
-        Transaction tr = null;
-        try {
-            tr = session.beginTransaction();
-            session.createSQLQuery("truncate table Item").executeUpdate();
-                tr.commit();
-        } catch (Exception e) {
-            if (tr != null) {
-                tr.rollback();
-                e.printStackTrace();
-            }
-        } finally {
-            session.close();
-        }
+        this.tx(
+                session -> session.createQuery("delete from Item").executeUpdate()
+        );
     }
 }
